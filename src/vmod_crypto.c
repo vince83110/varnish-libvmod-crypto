@@ -1,13 +1,10 @@
 #include "config.h"
 
 #include <cache/cache.h>
-#include <vdef.h>
-#include <vrt.h>
-#include <vcl.h>
 
 #include "vcc_crypto_if.h"
 
-VCL_STRING __match_proto__(td_crypto_hello)
+VCL_STRING
 vmod_hello(VRT_CTX)
 {
 
