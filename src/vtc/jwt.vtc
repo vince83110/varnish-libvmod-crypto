@@ -1,0 +1,37 @@
+varnishtest "test vmod-crypto"
+
+server s1 {
+	rxreq
+	txresp
+} -start
+
+varnish v1 -vcl+backend {
+	import crypto;
+	import blob;
+
+	sub vcl_init {
+	    new v = crypto.verifier(sha256, {"
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0l+1tg+ioDHojDA9/LJA
+SBq0D2oWd6jgXkJg9GJI7uFShWwKvKHNjRirkx3Ozk9xCZveOwj4LGGOXPRgGBbn
+Ad8xjeZKJ4+MWBNQasfPsuqkm5CWWtYt5Td4zJ/jtDu0F7LPgpKL5G0va9FbdcdY
+bWDL9Nva2ncJ7LnUZy9QEwCGg+KsK9J1vVPG0u1/ORuVc3fVsnKQvRvq0pPZbQWp
+8HrTVZh8VyqA8IghVUsENfzenjPhesfff0pzwUC/PCwsWlbbDXGHQw59nQ+NvCZW
+1MSp+eU66dELZV9r/uTMrOZrHqg2O2rSCJsIwJUsS9SM852FkW7GWEHKMSU4NuBY
+0wIDAQAB
+-----END PUBLIC KEY-----
+"});
+	    new sig = blob.blob(BASE64URLNOPAD,
+	    "Hgfhz88BIQ0T3q1DjWMG02ZvQi8L3mleS89C3ypb3iL7ccaSWWO-Vg2YFTk8vH7tBL7MznppQhDuj64UrCAh1Sg5UmtzL3dw-3HdIvfcubcgi6AoP2gz_cFay5tR51MUmwyrylcIZx5KP9DL7_OMj6sHUQMcnUlxuBF9ct4KnzimfIYXOfxpt6uY51z14nmEgxHJ2tG9gwaw3dXMwugteVStynVdgYBKRRCorMwNsH9VhrCCUUsZLAkTQvgRIhW9vUWzdCqz74HSnMijuh4Gf1Ha0uP-9_k8Aav1wcj-9M05gWBoyreM1k9S4eGJffVFd5gF73rP2SnH077k0Sz4pw");
+	}
+        sub vcl_deliver {
+	    set resp.http.up = v.update("eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlIjoiOkJERTEwMDAzNTE6IiwiZXhwIjoxNTM0NDMyMzYyLCJzdWIiOiJodHRwX3Rlc3QifQ");
+	    set resp.http.ok = v.valid(sig.get());
+        }
+} -start
+
+client c1 {
+	txreq
+	rxresp
+	expect resp.status == 200
+} -run

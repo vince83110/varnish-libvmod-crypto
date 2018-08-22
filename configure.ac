@@ -18,12 +18,34 @@ AC_ARG_WITH([rst2man],
 	[RST2MAN="$withval"],
 	AC_CHECK_PROGS(RST2MAN, [rst2man rst2man.py], []))
 
+AC_CHECK_LIB([crypto], [PEM_read_RSA_PUBKEY])
+test "$ac_cv_lib_crypto_PEM_read_RSA_PUBKEY" == "no" && \
+AC_MSG_ERROR([Need libcrypto.])
+
+AC_CHECK_PROGS(BASE64, [base64], [no])
+test "$BASE64" == "no" && AC_MSG_ERROR([Required program 'base64' not found.])
+
+AC_CHECK_PROGS(OPENSSL, [openssl], [no])
+test "$OPENSSL" == "no" && AC_MSG_ERROR([Required program 'openssl' not found.])
+
+AC_CHECK_PROGS(SED, [sed], [no])
+test "$SED" == "no" && AC_MSG_ERROR([Required program 'sed' not found.])
+
+AC_CHECK_PROGS(DD, [dd], [no])
+test "$DD" == "no" && AC_MSG_ERROR([Required program 'dd' not found.])
+
+AC_CHECK_PROGS(BASH, [bash], [no])
+test "$BASH" == "no" && AC_MSG_ERROR([Required program 'bash' not found.])
+
+
 VARNISH_PREREQ([5.2.0])
 VARNISH_VMODS([crypto])
 
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
+	src/vtc/sigs/Makefile
+	src/vtc/data/Makefile
 ])
 
 AC_OUTPUT
