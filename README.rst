@@ -51,10 +51,10 @@ Example
 
 	sub vcl_init {
 	    new v = crypto.verifier(sha256, {"
------BEGIN PUBLIC KEY-----
-...
------END PUBLIC KEY-----
-"});
+	-----BEGIN PUBLIC KEY-----
+	...
+	-----END PUBLIC KEY-----
+	"});
 	}
 	sub vcl_deliver {
 	    if (! v.update("data")) {
