@@ -287,10 +287,20 @@ VCL_BOOL vmod_verifier_reset(VRT_CTX,
 	return (!! crypto_verifier_task_md_ctx(ctx, vcv, 1));
 }
 
+static int
+crypto_err_cb(const char *s, size_t l, void *u)
+{
+	VRT_CTX;
+	CAST_OBJ_NOTNULL(ctx, u, VRT_CTX_MAGIC);
+	VSLb(ctx->vsl, SLT_Debug, "crypto %.*s", l, s);
+}
+
+
 VCL_BOOL vmod_verifier_valid(VRT_CTX,
     struct vmod_crypto_verifier *vcv, VCL_BLOB sig)
 {
 	EVP_MD_CTX *evpctx = crypto_verifier_task_md_ctx(ctx, vcv, 0);
+	VCL_BOOL r;
 
 	if (evpctx == NULL)
 		return (0);
@@ -299,5 +309,11 @@ VCL_BOOL vmod_verifier_valid(VRT_CTX,
 		return (0);
 
 	ERR_clear_error();
-	return (!! EVP_DigestVerifyFinal(evpctx, sig->priv, sig->len));
+	r = !! EVP_DigestVerifyFinal(evpctx, sig->priv, sig->len);
+
+	if (! r) {
+		VSLb(ctx->vsl, SLT_Debug, "%s.valid() failed", vcv->vcl_name);
+		ERR_print_errors_cb(crypto_err_cb, (void *)ctx);
+	}
+	return (r);
 }
