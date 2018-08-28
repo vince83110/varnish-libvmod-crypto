@@ -23,9 +23,9 @@ for i in ${sz[@]} ; do
     if [[ -f ${i} ]] ; then
 	touch ${i}
     else
-	dd if=/dev/zero bs=${blk} count=1 | \
+	dd if=/dev/zero iflag=fullblock bs=${blk} count=1 | \
 	    openssl aes-128-cbc -k $i -nosalt -nopad | \
-	    dd of=${i} bs=${i} count=1
+	    dd iflag=fullblock of=${i} bs=${i} count=1
     fi
 
     if [[ -f ${i}.b64 ]] ; then
@@ -39,7 +39,7 @@ for i in ${sz[@]} ; do
     if [[ -f ${i}_${j} ]] ; then
 	touch ${i}_${j}
     else
-	dd if=${i} of=${i}_${j} bs=${j} count=1
+	dd if=${i} iflag=fullblock of=${i}_${j} bs=${j} count=1
     fi
 
     if [[ -f ${i}_${j}.b64 ]] ; then
