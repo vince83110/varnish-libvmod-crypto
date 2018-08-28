@@ -45,7 +45,6 @@ md_init (void) {
 #endif
 #ifndef OPENSSL_NO_MD5
 	mdtbl[md5] = EVP_md5();
-	mdtbl[md5_sha1] = EVP_md5_sha1();
 #endif
 #ifndef OPENSSL_NO_SHA
 	mdtbl[sha1] = EVP_sha1();

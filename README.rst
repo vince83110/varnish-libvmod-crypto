@@ -84,7 +84,7 @@ new xverifier = verifier(ENUM digest, STRING key)
 ::
 
    new xverifier = verifier(
-      ENUM {md_null, md4, md5, md5_sha1, sha1, sha224, sha256, sha384, sha512, ripemd160, rmd160, whirlpool} digest,
+      ENUM {md_null, md4, md5, sha1, sha224, sha256, sha384, sha512, ripemd160, rmd160, whirlpool} digest,
       STRING key
    )
 

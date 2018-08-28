@@ -1,7 +1,6 @@
 VMODENUM(md_null)
 VMODENUM(md4)
 VMODENUM(md5)
-VMODENUM(md5_sha1)
 VMODENUM(sha1)
 //VMODENUM(dss)
 //VMODENUM(dss1)
