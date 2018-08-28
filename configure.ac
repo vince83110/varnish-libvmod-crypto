@@ -22,6 +22,11 @@ AC_CHECK_LIB([crypto], [PEM_read_RSA_PUBKEY])
 test "$ac_cv_lib_crypto_PEM_read_RSA_PUBKEY" == "no" && \
 AC_MSG_ERROR([Need libcrypto.])
 
+AC_CHECK_LIB([crypto],
+	[EVP_MD_CTX_free],
+	[AC_DEFINE([HAVE_EVP_MD_CTX_FREE], [],
+	 [Libcrypto has EVP_MD_CTX_free])])
+
 AC_CHECK_PROGS(BASE64, [base64], [no])
 test "$BASE64" == "no" && AC_MSG_ERROR([Required program 'base64' not found.])
 

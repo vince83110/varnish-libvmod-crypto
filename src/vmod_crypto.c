@@ -51,6 +51,10 @@ fini(void)
 {
 
 }
+#ifndef HAVE_EVP_MD_CTX_FREE
+#define EVP_MD_CTX_free(x) EVP_MD_CTX_destroy(x)
+#define EVP_MD_CTX_new() EVP_MD_CTX_create()
+#endif
 
 struct vmod_crypto_verifier {
 	unsigned	magic;
