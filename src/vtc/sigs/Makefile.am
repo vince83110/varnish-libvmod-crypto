@@ -1,3 +1,0 @@
-
-check:
-	./gen.sh

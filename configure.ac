@@ -44,8 +44,6 @@ VARNISH_VMODS([crypto])
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
-	src/vtc/sigs/Makefile
-	src/vtc/data/Makefile
 ])
 
 AC_OUTPUT

@@ -35,7 +35,9 @@ function gensig() {
     d=${alg}_${bits}.pem
     e=${alg}_${bits}.pub.pem
     f=${alg}_${bits}_${md}_${len}.sig
-    if ! [[ -f ${f} ]] ; then
+    if [[ -f ${f} ]] ; then
+	touch ${f}
+    else
 	if ! ( rm -f ${f}.b64;
 	       openssl dgst -${md} -sign ../keys/${d} -out ${f} \
 		       ../data/${len} && \
@@ -46,21 +48,27 @@ function gensig() {
 	    return 1
 	fi
     fi
-    [[ -f ${f}.b64 ]] || \
+    if [[ -f ${f}.b64 ]] ; then
+	touch ${f}.b64
+    else
 	base64 ${f} >${f}.b64
+    fi
 }
 
 function genvtc {
     f=../${alg}_${bits}_${md}_${l1}.vtc
     half=$((l1 / 2))
 
-    [[ -f ${f} ]] || \
+    if [[ -f ${f} ]] ; then
+	touch ${f}
+    else
 	sed <../vmod_crypto.tpl >${f} \
 	    -e "s:§{ALG}:${alg}:g" \
 	    -e "s:§{BITS}:${bits}:g" \
 	    -e "s:§{MD}:${md}:g" \
 	    -e "s:§{LEN}:${l1}:g" \
 	    -e "s:§{HALF}:${half}:g"
+    fi
 }
 for l1 in ${lens[@]} ; do
     for md in ${mds[@]} ; do

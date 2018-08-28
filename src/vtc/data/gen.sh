@@ -2,6 +2,8 @@
 
 set -eux
 
+cd $(dirname $0)
+
 typeset -air sz=(
     11
     83
@@ -17,15 +19,32 @@ typeset -air sz=(
 
 for i in ${sz[@]} ; do
     blk=$(((i + 16) & ~15))
-    [[ -f ${i} ]] || \
+
+    if [[ -f ${i} ]] ; then
+	touch ${i}
+    else
 	dd if=/dev/zero bs=${blk} count=1 | \
 	    openssl aes-128-cbc -k $i -nosalt -nopad | \
 	    dd of=${i} bs=${i} count=1
-    [[ -f ${i}.b64 ]] || \
+    fi
+
+    if [[ -f ${i}.b64 ]] ; then
+	touch ${i}.b64
+    else
 	base64 ${i} >${i}.b64
+    fi
+
     j=$((i / 2))
-    [[ -f ${i}_${j} ]] || \
+
+    if [[ -f ${i}_${j} ]] ; then
+	touch ${i}_${j}
+    else
 	dd if=${i} of=${i}_${j} bs=${j} count=1
-    [[ -f ${i}_${j}.b64 ]] || \
+    fi
+
+    if [[ -f ${i}_${j}.b64 ]] ; then
+	touch ${i}_${j}.b64
+    else
 	base64 ${i}_${j} >${i}_${j}.b64
+    fi
 done
