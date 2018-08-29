@@ -28,6 +28,13 @@
 
 #include "config.h"
 
+#define OPENSSL_THREAD_DEFINES
+#include <openssl/opensslconf.h>
+#ifndef OPENSSL_THREADS
+#error "Need thread support in libcrypto"
+#endif
+
+
 #include <string.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -39,18 +46,86 @@
 
 #include "md.h"
 
+/*
+ * ------------------------------------------------------------
+ * libcryto housekeeping
+ *
+ * XXX unclear how this works if another vmod was to use libcrypto also
+ *     - namespace it?
+ */
+
+
+static unsigned long
+crypto_thread_id(void)
+{
+	return ((unsigned long)pthread_self());
+}
+
+static pthread_mutex_t *crypto_locks = NULL;
+static size_t crypto_locks_n = 0;
+
+static void
+crypto_lock(int mode, int n, const char *file, int line)
+{
+	(void) file;
+	(void) line;
+
+	AN(crypto_locks);
+	assert(n < crypto_locks_n);
+
+	if (mode & CRYPTO_LOCK)
+		pthread_mutex_lock(&crypto_locks[n]);
+	else
+		pthread_mutex_unlock(&crypto_locks[n]);
+}
+
 static __attribute__((constructor)) void
 init(void)
 {
+	size_t i, n;
+
 	md_init();
+
+	n = CRYPTO_num_locks();
+	crypto_locks = calloc(n, sizeof(pthread_mutex_t));
+	AN(crypto_locks);
+	crypto_locks_n = n;
+
+	for (i = 0; i < n; i++)
+		pthread_mutex_init(&crypto_locks[i], NULL);
+
+	CRYPTO_set_id_callback(crypto_thread_id);
+	CRYPTO_set_locking_callback(crypto_lock);
+
+	// deprecated in newer OpenSSL/libressl
 	OpenSSL_add_all_algorithms();
 }
 
 static __attribute__((destructor)) void
 fini(void)
 {
+	size_t i;
 
+	AN(crypto_locks);
+
+	EVP_cleanup();
+
+	CRYPTO_set_id_callback(NULL);
+	CRYPTO_set_locking_callback(NULL);
+
+	for (i = 0; i < crypto_locks_n; i++)
+		pthread_mutex_destroy(&crypto_locks[i]);
+
+	free(TRUST_ME(crypto_locks));
+	crypto_locks = NULL;
+	crypto_locks_n = 0;
 }
+
+/*
+ * ------------------------------------------------------------
+ * libcryto housekeeping
+ */
+
 #ifndef HAVE_EVP_MD_CTX_FREE
 #define EVP_MD_CTX_free(x) EVP_MD_CTX_destroy(x)
 #define EVP_MD_CTX_new() EVP_MD_CTX_create()
