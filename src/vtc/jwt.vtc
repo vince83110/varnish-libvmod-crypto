@@ -21,17 +21,29 @@ bWDL9Nva2ncJ7LnUZy9QEwCGg+KsK9J1vVPG0u1/ORuVc3fVsnKQvRvq0pPZbQWp
 0wIDAQAB
 -----END PUBLIC KEY-----
 "});
+	    # note: always verifying against the same signature is
+	    # not a realistic use case.
 	    new sig = blob.blob(BASE64URLNOPAD,
 	    "Hgfhz88BIQ0T3q1DjWMG02ZvQi8L3mleS89C3ypb3iL7ccaSWWO-Vg2YFTk8vH7tBL7MznppQhDuj64UrCAh1Sg5UmtzL3dw-3HdIvfcubcgi6AoP2gz_cFay5tR51MUmwyrylcIZx5KP9DL7_OMj6sHUQMcnUlxuBF9ct4KnzimfIYXOfxpt6uY51z14nmEgxHJ2tG9gwaw3dXMwugteVStynVdgYBKRRCorMwNsH9VhrCCUUsZLAkTQvgRIhW9vUWzdCqz74HSnMijuh4Gf1Ha0uP-9_k8Aav1wcj-9M05gWBoyreM1k9S4eGJffVFd5gF73rP2SnH077k0Sz4pw");
 	}
-        sub vcl_deliver {
-	    set resp.http.up = v.update("eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlIjoiOkJERTEwMDAzNTE6IiwiZXhwIjoxNTM0NDMyMzYyLCJzdWIiOiJodHRwX3Rlc3QifQ");
-	    set resp.http.ok = v.valid(sig.get());
+	sub vcl_deliver {
+	    set resp.http.up = v.update(req.http.data);
+	    if (v.valid(sig.get())) {
+		set resp.status = 200;
+	    } else {
+		set resp.status = 400;
+	    }
         }
 } -start
 
 client c1 {
-	txreq
+	txreq -hdr "data: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlIjoiOkJERTEwMDAzNTE6IiwiZXhwIjoxNTM0NDMyMzYyLCJzdWIiOiJodHRwX3Rlc3QifQ"
 	rxresp
 	expect resp.status == 200
+	expect resp.http.up == true
+
+	txreq -hdr "data: bad"
+	rxresp
+	expect resp.status == 400
+	expect resp.http.up == true
 } -run
