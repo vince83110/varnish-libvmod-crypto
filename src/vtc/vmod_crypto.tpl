@@ -57,7 +57,7 @@ varnish v1 -vcl+backend {
 	}
 } -start
 
-client c0 -repeat 100 {
+client c0 -repeat 100 -keepalive {
 	txreq
 	rxresp
 	expect resp.status == 200
@@ -68,7 +68,7 @@ client c0 -repeat 100 {
 	expect resp.http.up == true
 	expect resp.http.ok == true
 } -run
-client c1 -repeat 100 {
+client c1 -repeat 100 -keepalive {
 	txreq
 	rxresp
 	expect resp.status == 200
@@ -79,7 +79,7 @@ client c1 -repeat 100 {
 	expect resp.http.up == true
 	expect resp.http.ok == true
 } -run
-client c10 -repeat 100 {
+client c10 -repeat 100 -keepalive {
 	txreq
 	rxresp
 	expect resp.status == 200
@@ -90,7 +90,7 @@ client c10 -repeat 100 {
 	expect resp.http.up == true
 	expect resp.http.ok == true
 } -run
-client c11 -repeat 100 {
+client c11 -repeat 100 -keepalive {
 	txreq
 	rxresp
 	expect resp.status == 200
@@ -101,7 +101,7 @@ client c11 -repeat 100 {
 	expect resp.http.up == true
 	expect resp.http.ok == true
 } -run
-client c110 -repeat 100 {
+client c110 -repeat 100 -keepalive {
 	txreq
 	rxresp
 	expect resp.status == 200
@@ -112,7 +112,7 @@ client c110 -repeat 100 {
 	expect resp.http.up == true
 	expect resp.http.ok == true
 } -run
-client c111 -repeat 100 {
+client c111 -repeat 100 -keepalive {
 	txreq
 	rxresp
 	expect resp.status == 200
@@ -123,7 +123,7 @@ client c111 -repeat 100 {
 	expect resp.http.up == true
 	expect resp.http.ok == true
 } -run
-client c1010 -repeat 100 {
+client c1010 -repeat 100 -keepalive {
 	txreq
 	rxresp
 	expect resp.status == 200
@@ -134,7 +134,7 @@ client c1010 -repeat 100 {
 	expect resp.http.up == true
 	expect resp.http.ok == true
 } -run
-client c1011 -repeat 100 {
+client c1011 -repeat 100 -keepalive {
 	txreq
 	rxresp
 	expect resp.status == 200
