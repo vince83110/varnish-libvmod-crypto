@@ -7,7 +7,7 @@
 # See LICENSE
 #
 
-$Module crypto 3 Varnish crypto Module
+$Module crypto 3 "Public Key hash verification for Varnish"
 
 DESCRIPTION
 ===========
