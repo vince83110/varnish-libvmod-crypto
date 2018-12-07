@@ -12,9 +12,9 @@
 vmod_crypto
 ===========
 
----------------------
-Varnish crypto Module
----------------------
+----------------------------------------
+Public Key hash verification for Varnish
+----------------------------------------
 
 :Manual section: 3
 
