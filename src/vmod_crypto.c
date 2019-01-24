@@ -345,9 +345,9 @@ vmod_verifier_update_blob(VRT_CTX, struct vmod_crypto_verifier *vcv,
 
 	ERR_clear_error();
 	if (blob && blob->len > 0) {
-		AN(blob->priv);
+		AN(blob->blob);
 		if (EVP_DigestVerifyUpdate(evpctx,
-			blob->priv, blob->len) != 1) {
+			blob->blob, blob->len) != 1) {
 			VRT_fail(ctx, "EVP_DigestVerifyUpdate"
 			    " failed, error 0x%lx", ERR_get_error());
 			return (0);
@@ -380,11 +380,11 @@ VCL_BOOL vmod_verifier_valid(VRT_CTX,
 	if (evpctx == NULL)
 		return (0);
 
-	if (sig == NULL || sig->len == 0 || sig->priv == NULL)
+	if (sig == NULL || sig->len == 0 || sig->blob == NULL)
 		return (0);
 
 	ERR_clear_error();
-	r = !! EVP_DigestVerifyFinal(evpctx, sig->priv, sig->len);
+	r = !! EVP_DigestVerifyFinal(evpctx, sig->blob, sig->len);
 
 	if (! r) {
 		VSLb(ctx->vsl, SLT_Debug, "%s.valid() failed", vcv->vcl_name);
