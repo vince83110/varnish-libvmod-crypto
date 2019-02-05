@@ -8,6 +8,7 @@
 #
 
 $Module crypto 3 "Public Key hash verification for Varnish"
+$Prefix vmod
 
 DESCRIPTION
 ===========

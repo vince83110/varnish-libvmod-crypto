@@ -82,9 +82,9 @@ md_evp(enum md_e md) {
 
 enum md_e
 md_parse(VCL_ENUM e) {
-	#define VMODENUM(n) if (e == vmod_enum_ ## n) return(n);
+	#define VMODENUM(n) if (e == VENUM(n)) return(n);
 #include "tbl_md.h"
 	// additional aliases
-	if (e == vmod_enum_rmd160 ) return (ripemd160);
+	if (e == VENUM(rmd160)) return (ripemd160);
 	WRONG("illegal md enum");
 }
