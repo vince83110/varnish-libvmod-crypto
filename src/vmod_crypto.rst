@@ -10,7 +10,7 @@
 .. _vmod_crypto(3):
 
 ======================================================
-vmod_crypto - Public Key hash verification for Varnish
+VMOD crypto - Public Key hash verification for Varnish
 ======================================================
 
 SYNOPSIS
@@ -20,16 +20,17 @@ SYNOPSIS
 
   import crypto [from "path"]
   
-  :ref:`obj_verifier`
+  :ref:`vmod_crypto.verifier`
   
-    :ref:`func_verifier.update`
+      :ref:`vmod_crypto.verifier.update`
   
-    :ref:`func_verifier.update_blob`
+      :ref:`vmod_crypto.verifier.update_blob`
   
-    :ref:`func_verifier.reset`
+      :ref:`vmod_crypto.verifier.reset`
   
-    :ref:`func_verifier.valid`
+      :ref:`vmod_crypto.verifier.valid`
   
+
 DESCRIPTION
 ===========
 
@@ -58,7 +59,7 @@ Example
 	}
 } -start
 
-.. _obj_verifier:
+.. _vmod_crypto.verifier:
 
 new xverifier = crypto.verifier(ENUM digest, STRING key)
 --------------------------------------------------------
@@ -79,21 +80,21 @@ The cryptographic method to be used and the key length are
 automatically determined from _key_. Typically supported methods
 comprise RSA and DSA.
 
-.. _func_verifier.update:
+.. _vmod_crypto.verifier.update:
 
 BOOL xverifier.update(STRING)
 -----------------------------
 
 Add strings to the data to be verfied with the verifier object.
 
-.. _func_verifier.update_blob:
+.. _vmod_crypto.verifier.update_blob:
 
 BOOL xverifier.update_blob(BLOB)
 --------------------------------
 
 Add a blob to the data to be verified with the verifier object.
 
-.. _func_verifier.reset:
+.. _vmod_crypto.verifier.reset:
 
 BOOL xverifier.reset()
 ----------------------
@@ -101,7 +102,7 @@ BOOL xverifier.reset()
 Reset the verfication state as if previous calls to the update methods
 had not happened.
 
-.. _func_verifier.valid:
+.. _vmod_crypto.verifier.valid:
 
 BOOL xverifier.valid(BLOB signature)
 ------------------------------------
