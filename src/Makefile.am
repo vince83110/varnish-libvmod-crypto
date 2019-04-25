@@ -2179,5 +2179,38 @@ CLEANFILES = \
 	$(SIGF)	\
 	$(BUILT_TESTS)
 
+TESTS_QUICK = \
+	vtc/DSA_1024_sha1_512.vtc	\
+	vtc/DSA_2048_sha256_11.vtc	\
+	vtc/DSA_2048_sha256_1283.vtc	\
+	vtc/DSA_2048_sha256_2003.vtc	\
+	vtc/DSA_2048_sha256_2048.vtc	\
+	vtc/DSA_2048_sha256_241.vtc	\
+	vtc/DSA_2048_sha256_512.vtc	\
+	vtc/DSA_2048_sha256_617.vtc	\
+	vtc/DSA_2048_sha256_7919.vtc	\
+	vtc/DSA_2048_sha256_8192.vtc	\
+	vtc/DSA_2048_sha256_83.vtc	\
+	vtc/DSA_512_sha512_2048.vtc	\
+	vtc/RSA_1024_md4_7919.vtc	\
+	vtc/RSA_15360_rmd160_7919.vtc	\
+	vtc/RSA_2048_sha256_11.vtc	\
+	vtc/RSA_2048_sha256_1283.vtc	\
+	vtc/RSA_2048_sha256_2003.vtc	\
+	vtc/RSA_2048_sha256_2048.vtc	\
+	vtc/RSA_2048_sha256_241.vtc	\
+	vtc/RSA_2048_sha256_512.vtc	\
+	vtc/RSA_2048_sha256_617.vtc	\
+	vtc/RSA_2048_sha256_7919.vtc	\
+	vtc/RSA_2048_sha256_8192.vtc	\
+	vtc/RSA_2048_sha256_83.vtc	\
+	vtc/RSA_3072_sha1_241.vtc	\
+	vtc/RSA_4096_md4_7919.vtc	\
+	vtc/RSA_512_sha224_617.vtc	\
+	vtc/RSA_7680_sha512_2003.vtc
+
 TESTS = vtc/jwt.vtc	\
-	$(BUILT_TESTS)
+	$(TESTS_QUICK)
+
+# Comment in for testing all permutations - slow!
+#	$(BUILT_TESTS)
