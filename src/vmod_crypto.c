@@ -41,6 +41,7 @@
 #include <openssl/pem.h>
 
 #include <cache/cache.h>
+#include <vcl.h>
 
 #include "vcc_crypto_if.h"
 
@@ -131,6 +132,223 @@ fini(void)
 #define EVP_MD_CTX_new() EVP_MD_CTX_create()
 #endif
 
+/*
+ * ------------------------------------------------------------
+ * $Object key()
+ */
+
+struct VPFX(crypto_key) {
+	unsigned	magic;
+#define VMOD_CRYPTO_KEY_MAGIC		0x32c81a50
+	const char	*vcl_name;
+	EVP_PKEY	*pkey;
+};
+
+#define CRYPTO_KEY_BLOB		0x32c81a51
+
+static void
+key_free(void *ptr)
+{
+	struct VPFX(crypto_key) *k;
+
+	CAST_OBJ_NOTNULL(k, ptr, VMOD_CRYPTO_KEY_MAGIC);
+
+	if (k->pkey != NULL)
+		EVP_PKEY_free(k->pkey);
+
+	memset(k, 0, sizeof *k);
+}
+
+VCL_VOID
+vmod_key__init(VRT_CTX,
+    struct VPFX(crypto_key) **kp, const char *vcl_name,
+    struct vmod_priv *priv)
+{
+	struct VPFX(crypto_key) *k;
+
+	AN(kp);
+	AZ(*kp);
+
+	assert(ctx->method == VCL_MET_INIT);
+
+	k = WS_Alloc(ctx->ws, sizeof *k);
+	INIT_OBJ(k, VMOD_CRYPTO_KEY_MAGIC);
+
+	k->vcl_name = vcl_name;
+
+	/* use PRIV_TASK to free key after vcl_init */
+	priv->priv = k;
+	priv->free = key_free;
+
+	*kp = k;
+}
+
+VCL_VOID
+vmod_key__fini(struct VPFX(crypto_key) **kp)
+{
+	*kp = NULL;
+}
+
+static int
+key_ctx_ok(VRT_CTX)
+{
+	CHECK_OBJ_NOTNULL(ctx, VRT_CTX_MAGIC);
+
+	if (ctx->method == VCL_MET_INIT)
+		return (1);
+
+	VRT_fail(ctx, "key methods can only be used in vcl_init {}");
+	return (0);
+}
+
+VCL_BLOB
+vmod_key_use(VRT_CTX, struct VPFX(crypto_key) *k)
+{
+	if (! key_ctx_ok(ctx))
+		return (NULL);
+
+	CHECK_OBJ_NOTNULL(k, VMOD_CRYPTO_KEY_MAGIC);
+	return (VRT_blob(ctx, "xkey.use()", k, sizeof *k, CRYPTO_KEY_BLOB));
+}
+
+EVP_PKEY *
+pkey_blob(VRT_CTX, VCL_BLOB blob)
+{
+	struct VPFX(crypto_key) *k;
+
+	if (blob && blob->type == CRYPTO_KEY_BLOB &&
+	    blob->blob != NULL &&
+	    blob->len == sizeof(*k)) {
+		CAST_OBJ_NOTNULL(k, TRUST_ME(blob->blob),
+		    VMOD_CRYPTO_KEY_MAGIC);
+		return (k->pkey);
+	}
+	VRT_fail(ctx, "invalid key blob");
+	return (NULL);
+}
+
+/* to be freed by caller */
+static EVP_PKEY *
+pkey_pem(VRT_CTX, VCL_STRING pem)
+{
+	EVP_PKEY *pkey;
+	BIO *bio;
+
+	ERR_clear_error();
+
+	bio = BIO_new_mem_buf(pem, -1);
+	if (bio == NULL) {
+		VRT_fail(ctx, "key bio failed");
+		return (NULL);
+	}
+
+	pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+	BIO_free_all(bio);
+
+	if (pkey != NULL)
+		return (pkey);
+
+	VRT_fail(ctx, "read public key failed, error 0x%lx",
+	    ERR_get_error());
+
+	return (NULL);
+}
+
+VCL_VOID
+vmod_key_pem_pubkey(VRT_CTX, struct VPFX(crypto_key) *k,
+    VCL_STRING pem)
+{
+	if (! key_ctx_ok(ctx))
+		return;
+
+	CHECK_OBJ_NOTNULL(k, VMOD_CRYPTO_KEY_MAGIC);
+
+	if (k->pkey != NULL) {
+		VRT_fail(ctx, "xkey.pem_pubkey(): key already defined");
+		return;
+	}
+
+	k->pkey = pkey_pem(ctx, pem);
+}
+
+VCL_VOID
+vmod_key_rsa(VRT_CTX, struct VPFX(crypto_key) *k, struct VARGS(key_rsa) *args) {
+	BIGNUM *n = NULL, *e = NULL, *d = NULL;
+	EVP_PKEY *pkey;
+	RSA *rsa;
+
+	if (! key_ctx_ok(ctx))
+		return;
+
+	CHECK_OBJ_NOTNULL(k, VMOD_CRYPTO_KEY_MAGIC);
+
+	if (k->pkey != NULL) {
+		VRT_fail(ctx, "xkey.rsa(): key already defined");
+		return;
+	}
+
+	AN(args);
+
+	ERR_clear_error();
+
+	if (args->n && args->n->len > 0)
+		n = BN_bin2bn(args->n->blob, args->n->len, NULL);
+
+	if (args->e && args->e->len > 0)
+		e = BN_bin2bn(args->e->blob, args->e->len, NULL);
+
+	if (args->valid_d && args->d && args->d->len > 0)
+		d = BN_bin2bn(args->d->blob, args->d->len, NULL);
+
+	if (n == NULL || e == NULL) {
+		VRT_fail(ctx, "xkey.rsa(): n and/or e missing, error 0x%lx",
+		    ERR_get_error());
+		goto err_bn;
+	}
+
+	pkey = EVP_PKEY_new();
+	if (pkey == NULL) {
+		VRT_fail(ctx, "xkey.rsa(): pkey alloc failed, error 0x%lx",
+		    ERR_get_error());
+		goto err_bn;
+	}
+
+	rsa = RSA_new();
+	if (rsa == NULL) {
+		VRT_fail(ctx, "xkey.rsa(): rsa alloc failed, error 0x%lx",
+		    ERR_get_error());
+		goto err_pkey;
+	}
+
+	if (RSA_set0_key(rsa, n, e, d) != 1) {
+		VRT_fail(ctx, "xkey.rsa(): RSA_set0_key failed, error 0x%lx",
+		    ERR_get_error());
+		goto err_rsa;
+	}
+
+	EVP_PKEY_assign_RSA(pkey, rsa);
+
+	k->pkey = pkey;
+	return;
+
+  err_rsa:
+	RSA_free(rsa);
+
+  err_pkey:
+	EVP_PKEY_free(pkey);
+
+  err_bn:
+	if (n != NULL) BN_free(n);
+	if (e != NULL) BN_free(e);
+	if (d != NULL) BN_free(d);
+}
+
+
+/*
+ * ------------------------------------------------------------
+ * $Object verfier()
+ */
+
 struct vmod_crypto_verifier {
 	unsigned	magic;
 #define VMOD_CRYPTO_VERIFIER_MAGIC		0x32c81a57
@@ -146,16 +364,20 @@ struct vmod_crypto_verifier_task {
 
 VCL_VOID
 vmod_verifier__init(VRT_CTX,
-    struct vmod_crypto_verifier **vcvp, const char *vcl_name, VCL_ENUM md_s,
-    VCL_STRING pem)
+    struct vmod_crypto_verifier **vcvp, const char *vcl_name,
+    struct VARGS(verifier__init) *args)
 {
 	struct vmod_crypto_verifier *vcv;
-	const EVP_MD *md = md_evp(md_parse(md_s));
+	const EVP_MD *md = md_evp(md_parse(args->digest));
 	EVP_PKEY *pkey;
-	BIO *bio;
 
 	if (md == NULL) {
-		VRT_fail(ctx, "digest %s not supported", md_s);
+		VRT_fail(ctx, "digest %s not supported", args->digest);
+		return;
+	}
+
+	if (args->valid_pem ^ args->valid_key == 0) {
+		VRT_fail(ctx, "Need either pem or key, but not both");
 		return;
 	}
 
@@ -189,20 +411,15 @@ vmod_verifier__init(VRT_CTX,
 		goto err_digest;
 	}
 
-	bio = BIO_new_mem_buf(pem, -1);
-	if (bio == NULL) {
-		VRT_fail(ctx, "key bio failed");
-		goto err_digest;
-	}
+	if (args->valid_pem)
+		pkey = pkey_pem(ctx, args->pem);
+	else if (args->valid_key)
+		pkey = pkey_blob(ctx, args->key);
+	else
+		INCOMPL();
 
-	pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
-	if (pkey == NULL) {
-		VRT_fail(ctx, "read public key failed, error 0x%lx",
-		    ERR_get_error());
-		BIO_free_all(bio);
+	if (pkey == NULL)
 		goto err_digest;
-	}
-	BIO_free_all(bio);
 
 	if (EVP_DigestVerifyInit(vcv->evpctx, NULL, md, NULL, pkey) !=1) {
 		VRT_fail(ctx, "EVP_DigestVerifyInit failed, error 0x%lx",
@@ -210,7 +427,9 @@ vmod_verifier__init(VRT_CTX,
 		EVP_PKEY_free(pkey);
 		goto err_digest;
 	}
-	EVP_PKEY_free(pkey);
+
+	if (args->valid_pem)
+		EVP_PKEY_free(pkey);
 
 	*vcvp = vcv;
 	return;

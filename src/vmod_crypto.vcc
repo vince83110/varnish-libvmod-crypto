@@ -38,19 +38,48 @@ Example
 	}
 } -start
 
+$Object key(PRIV_TASK)
 
-$Object verifier(ENUM {md_null, md4, md5, sha1, sha224,
-	sha256, sha384, sha512, ripemd160, rmd160, whirlpool} digest,
-	STRING pem)
+Create a generic key object. The algorithm gets defined by the method
+called upon it.
 
-Create an object to verify signatures created using _digest_ and
-_pem_.
+Any methods on `crypto.key()`_ may only be used in ``sub vcl_init {}``.
 
-The _pem_ argument is a PEM-encoded public key specification.
+$Method BLOB .use()
+
+Wrap the key in a blob to be passed to `crypto.verifier()`_
+
+$Method VOID .pem_pubkey(STRING)
+
+Create a key from the PEM-encoded public key.
 
 The cryptographic method to be used and the key length are
 automatically determined from _pem_. Typically supported methods
 comprise RSA and DSA.
+
+Any error is fatal to vcl initialization.
+
+$Method VOID .rsa(BLOB n, BLOB e, [BLOB d])
+
+Create an RSA key from the parameters n, e, and optionally d.
+
+Any error is fatal to vcl initialization.
+
+$Object verifier(ENUM {md_null, md4, md5, sha1, sha224,
+	sha256, sha384, sha512, ripemd160, rmd160, whirlpool} digest,
+	[STRING pem], [BLOB key])
+
+Create an object to verify signatures created using _digest_ and
+_key_.
+
+The _key_ argument should be a call to `xkey.use()`_ on the respective
+`crypto.key()`_ object.
+
+Alternatively to _key_, the _pem_ argument may be used to pass a
+PEM-encoded public key specification. Use of the _pem_ argument is
+deprecated.
+
+Either the _key_ or the _pem_ argument must be given.
 
 $Method BOOL .update(STRANDS)
 

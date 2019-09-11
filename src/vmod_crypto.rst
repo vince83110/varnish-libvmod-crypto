@@ -20,15 +20,23 @@ SYNOPSIS
 
   import crypto [as name] [from "path"]
   
-  :ref:`vmod_crypto.verifier`
+  :ref:`crypto.key()`
   
-      :ref:`vmod_crypto.verifier.update`
+      :ref:`xkey.use()`
   
-      :ref:`vmod_crypto.verifier.update_blob`
+      :ref:`xkey.pem_pubkey()`
   
-      :ref:`vmod_crypto.verifier.reset`
+      :ref:`xkey.rsa()`
   
-      :ref:`vmod_crypto.verifier.valid`
+  :ref:`crypto.verifier()`
+  
+      :ref:`xverifier.update()`
+  
+      :ref:`xverifier.update_blob()`
+  
+      :ref:`xverifier.reset()`
+  
+      :ref:`xverifier.valid()`
   
 
 DESCRIPTION
@@ -59,42 +67,85 @@ Example
 	}
 } -start
 
-.. _vmod_crypto.verifier:
+.. _crypto.key():
 
-new xverifier = crypto.verifier(ENUM digest, STRING pem)
---------------------------------------------------------
+new xkey = crypto.key()
+-----------------------
 
-::
+Create a generic key object. The algorithm gets defined by the method
+called upon it.
 
-   new xverifier = crypto.verifier(
-      ENUM {md_null, md4, md5, sha1, sha224, sha256, sha384, sha512, ripemd160, rmd160, whirlpool} digest,
-      STRING pem
-   )
+Any methods on `crypto.key()`_ may only be used in ``sub vcl_init {}``.
 
-Create an object to verify signatures created using _digest_ and
-_pem_.
+.. _xkey.use():
 
-The _pem_ argument is a PEM-encoded public key specification.
+BLOB xkey.use()
+---------------
+
+Wrap the key in a blob to be passed to `crypto.verifier()`_
+
+.. _xkey.pem_pubkey():
+
+VOID xkey.pem_pubkey(STRING)
+----------------------------
+
+Create a key from the PEM-encoded public key.
 
 The cryptographic method to be used and the key length are
 automatically determined from _pem_. Typically supported methods
 comprise RSA and DSA.
 
-.. _vmod_crypto.verifier.update:
+Any error is fatal to vcl initialization.
+
+.. _xkey.rsa():
+
+VOID xkey.rsa(BLOB n, BLOB e, [BLOB d])
+---------------------------------------
+
+Create an RSA key from the parameters n, e, and optionally d.
+
+Any error is fatal to vcl initialization.
+
+.. _crypto.verifier():
+
+new xverifier = crypto.verifier(ENUM digest, [STRING pem], [BLOB key])
+----------------------------------------------------------------------
+
+::
+
+   new xverifier = crypto.verifier(
+      ENUM {md_null, md4, md5, sha1, sha224, sha256, sha384, sha512, ripemd160, rmd160, whirlpool} digest,
+      [STRING pem],
+      [BLOB key]
+   )
+
+Create an object to verify signatures created using _digest_ and
+_key_.
+
+The _key_ argument should be a call to `xkey.use()`_ on the respective
+`crypto.key()`_ object.
+
+Alternatively to _key_, the _pem_ argument may be used to pass a
+PEM-encoded public key specification. Use of the _pem_ argument is
+deprecated.
+
+Either the _key_ or the _pem_ argument must be given.
+
+.. _xverifier.update():
 
 BOOL xverifier.update(STRING)
 -----------------------------
 
 Add strings to the data to be verfied with the verifier object.
 
-.. _vmod_crypto.verifier.update_blob:
+.. _xverifier.update_blob():
 
 BOOL xverifier.update_blob(BLOB)
 --------------------------------
 
 Add a blob to the data to be verified with the verifier object.
 
-.. _vmod_crypto.verifier.reset:
+.. _xverifier.reset():
 
 BOOL xverifier.reset()
 ----------------------
@@ -102,7 +153,7 @@ BOOL xverifier.reset()
 Reset the verfication state as if previous calls to the update methods
 had not happened.
 
-.. _vmod_crypto.verifier.valid:
+.. _xverifier.valid():
 
 BOOL xverifier.valid(BLOB signature)
 ------------------------------------

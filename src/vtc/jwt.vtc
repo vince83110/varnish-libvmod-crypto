@@ -10,7 +10,8 @@ varnish v1 -vcl+backend {
 	import blob;
 
 	sub vcl_init {
-	    new v = crypto.verifier(sha256, {"
+	    new k = crypto.key();
+	    k.pem_pubkey({"
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0l+1tg+ioDHojDA9/LJA
 SBq0D2oWd6jgXkJg9GJI7uFShWwKvKHNjRirkx3Ozk9xCZveOwj4LGGOXPRgGBbn
@@ -21,6 +22,18 @@ bWDL9Nva2ncJ7LnUZy9QEwCGg+KsK9J1vVPG0u1/ORuVc3fVsnKQvRvq0pPZbQWp
 0wIDAQAB
 -----END PUBLIC KEY-----
 "});
+	/*
+{"kty":"RSA","e":"AQAB","kid":"a0d11ba1-4ab5-4c66-aa93-9899451d1637","n":"0l-1tg-ioDHojDA9_LJASBq0D2oWd6jgXkJg9GJI7uFShWwKvKHNjRirkx3Ozk9xCZveOwj4LGGOXPRgGBbnAd8xjeZKJ4-MWBNQasfPsuqkm5CWWtYt5Td4zJ_jtDu0F7LPgpKL5G0va9FbdcdYbWDL9Nva2ncJ7LnUZy9QEwCGg-KsK9J1vVPG0u1_ORuVc3fVsnKQvRvq0pPZbQWp8HrTVZh8VyqA8IghVUsENfzenjPhesfff0pzwUC_PCwsWlbbDXGHQw59nQ-NvCZW1MSp-eU66dELZV9r_uTMrOZrHqg2O2rSCJsIwJUsS9SM852FkW7GWEHKMSU4NuBY0w"}
+	*/
+
+	    new k2 = crypto.key();
+	    k2.rsa(n = blob.decode(BASE64URLNOPAD,
+				   encoded = "0l-1tg-ioDHojDA9_LJASBq0D2oWd6jgXkJg9GJI7uFShWwKvKHNjRirkx3Ozk9xCZveOwj4LGGOXPRgGBbnAd8xjeZKJ4-MWBNQasfPsuqkm5CWWtYt5Td4zJ_jtDu0F7LPgpKL5G0va9FbdcdYbWDL9Nva2ncJ7LnUZy9QEwCGg-KsK9J1vVPG0u1_ORuVc3fVsnKQvRvq0pPZbQWp8HrTVZh8VyqA8IghVUsENfzenjPhesfff0pzwUC_PCwsWlbbDXGHQw59nQ-NvCZW1MSp-eU66dELZV9r_uTMrOZrHqg2O2rSCJsIwJUsS9SM852FkW7GWEHKMSU4NuBY0w"),
+		   e = blob.decode(BASE64URLNOPAD, encoded = "AQAB"));
+
+	    new v = crypto.verifier(sha256, key=k.use());
+	    new v2 = crypto.verifier(sha256, key=k2.use());
+
 	    # note: always verifying against the same signature is
 	    # not a realistic use case.
 	    new sig = blob.blob(BASE64URLNOPAD,
@@ -29,6 +42,13 @@ bWDL9Nva2ncJ7LnUZy9QEwCGg+KsK9J1vVPG0u1/ORuVc3fVsnKQvRvq0pPZbQWp
 	sub vcl_deliver {
 	    set resp.http.up = v.update(req.http.data);
 	    if (v.valid(sig.get())) {
+		set resp.status = 200;
+	    } else {
+		set resp.status = 400;
+		return (deliver);
+	    }
+	    set resp.http.up2 = v2.update(req.http.data);
+	    if (v2.valid(sig.get())) {
 		set resp.status = 200;
 	    } else {
 		set resp.status = 400;
@@ -41,9 +61,11 @@ client c1 {
 	rxresp
 	expect resp.status == 200
 	expect resp.http.up == true
+	expect resp.http.up2 == true
 
 	txreq -hdr "data: bad"
 	rxresp
 	expect resp.status == 400
 	expect resp.http.up == true
+	expect resp.http.up2 == <undef>
 } -run
