@@ -309,27 +309,31 @@ crypto_verifier_task_md_ctx(VRT_CTX,
 
 VCL_BOOL
 vmod_verifier_update(VRT_CTX, struct vmod_crypto_verifier *vcv,
-    const char *s, ...)
+    VCL_STRANDS str)
 {
 	EVP_MD_CTX *evpctx = crypto_verifier_task_md_ctx(ctx, vcv, 0);
-	va_list ap;
+	const char *s;
+	int i;
 
 	if (evpctx == NULL)
 		return (0);
 
+	AN(str);
+
 	ERR_clear_error();
 
-	va_start(ap, s);
-	while (s != vrt_magic_string_end) {
-		if (s && *s &&
-		    EVP_DigestVerifyUpdate(evpctx, s, strlen(s)) != 1) {
+	for (i = 0; i < str->n; i++) {
+		s = str->p[i];
+
+		if (s == NULL || *s == '\0')
+			continue;
+
+		if (EVP_DigestVerifyUpdate(evpctx, s, strlen(s)) != 1) {
 			VRT_fail(ctx, "EVP_DigestVerifyUpdate"
 			    " failed, error 0x%lx", ERR_get_error());
 			return (0);
 		}
-		s = va_arg(ap, const char *);
 	}
-	va_end(ap);
 
 	return (1);
 }
@@ -338,7 +342,6 @@ vmod_verifier_update_blob(VRT_CTX, struct vmod_crypto_verifier *vcv,
     VCL_BLOB blob)
 {
 	EVP_MD_CTX *evpctx = crypto_verifier_task_md_ctx(ctx, vcv, 0);
-	va_list ap;
 
 	if (evpctx == NULL)
 		return (0);

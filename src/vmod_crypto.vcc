@@ -52,7 +52,7 @@ The cryptographic method to be used and the key length are
 automatically determined from _pem_. Typically supported methods
 comprise RSA and DSA.
 
-$Method BOOL .update(STRING_LIST)
+$Method BOOL .update(STRANDS)
 
 Add strings to the data to be verfied with the verifier object.
 
