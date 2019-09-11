@@ -147,7 +147,7 @@ struct vmod_crypto_verifier_task {
 VCL_VOID
 vmod_verifier__init(VRT_CTX,
     struct vmod_crypto_verifier **vcvp, const char *vcl_name, VCL_ENUM md_s,
-    VCL_STRING key_s)
+    VCL_STRING pem)
 {
 	struct vmod_crypto_verifier *vcv;
 	const EVP_MD *md = md_evp(md_parse(md_s));
@@ -189,7 +189,7 @@ vmod_verifier__init(VRT_CTX,
 		goto err_digest;
 	}
 
-	bio = BIO_new_mem_buf(key_s, -1);
+	bio = BIO_new_mem_buf(pem, -1);
 	if (bio == NULL) {
 		VRT_fail(ctx, "key bio failed");
 		goto err_digest;

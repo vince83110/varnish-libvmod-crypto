@@ -18,7 +18,7 @@ SYNOPSIS
 
 .. parsed-literal::
 
-  import crypto [from "path"]
+  import crypto [as name] [from "path"]
   
   :ref:`vmod_crypto.verifier`
   
@@ -61,23 +61,23 @@ Example
 
 .. _vmod_crypto.verifier:
 
-new xverifier = crypto.verifier(ENUM digest, STRING key)
+new xverifier = crypto.verifier(ENUM digest, STRING pem)
 --------------------------------------------------------
 
 ::
 
    new xverifier = crypto.verifier(
       ENUM {md_null, md4, md5, sha1, sha224, sha256, sha384, sha512, ripemd160, rmd160, whirlpool} digest,
-      STRING key
+      STRING pem
    )
 
 Create an object to verify signatures created using _digest_ and
-_key_.
+_pem_.
 
-The _key_ argument is a PEM-encoded public key specification.
+The _pem_ argument is a PEM-encoded public key specification.
 
 The cryptographic method to be used and the key length are
-automatically determined from _key_. Typically supported methods
+automatically determined from _pem_. Typically supported methods
 comprise RSA and DSA.
 
 .. _vmod_crypto.verifier.update:
