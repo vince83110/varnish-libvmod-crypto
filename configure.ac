@@ -26,6 +26,10 @@ AC_CHECK_LIB([crypto],
 	[EVP_MD_CTX_free],
 	[AC_DEFINE([HAVE_EVP_MD_CTX_FREE], [],
 	 [Libcrypto has EVP_MD_CTX_free])])
+AC_CHECK_LIB([crypto],
+	[RSA_set0_key],
+	[AC_DEFINE([HAVE_RSA_SET0_KEY], [],
+	 [Libcrypto has RSA_set0_key])])
 
 AC_CHECK_PROGS(BASE64, [base64], [no])
 test "$BASE64" == "no" && AC_MSG_ERROR([Required program 'base64' not found.])

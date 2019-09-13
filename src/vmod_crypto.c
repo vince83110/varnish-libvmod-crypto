@@ -124,12 +124,43 @@ fini(void)
 
 /*
  * ------------------------------------------------------------
- * libcryto housekeeping
+ * libcryto compat
  */
 
 #ifndef HAVE_EVP_MD_CTX_FREE
 #define EVP_MD_CTX_free(x) EVP_MD_CTX_destroy(x)
 #define EVP_MD_CTX_new() EVP_MD_CTX_create()
+#endif
+
+#ifndef HAVE_RSA_SET0_KEY
+/* from openssl crypto/rsa/rsa_lib.c */
+static int
+RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d)
+{
+    /* If the fields n and e in r are NULL, the corresponding input
+     * parameters MUST be non-NULL for n and e.	 d may be
+     * left NULL (in case only the public key is used).
+     */
+    if ((r->n == NULL && n == NULL)
+	|| (r->e == NULL && e == NULL))
+	return 0;
+
+    if (n != NULL) {
+	BN_free(r->n);
+	r->n = n;
+    }
+    if (e != NULL) {
+	BN_free(r->e);
+	r->e = e;
+    }
+    if (d != NULL) {
+	BN_clear_free(r->d);
+	r->d = d;
+	BN_set_flags(r->d, BN_FLG_CONSTTIME);
+    }
+
+    return 1;
+}
 #endif
 
 /*
