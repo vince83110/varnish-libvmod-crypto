@@ -87,8 +87,8 @@ DATAF = \
 
 $(DATAF): $(DATAF1)
 
-$(DATAF1): vtc/data/gen.sh
-	vtc/data/gen.sh
+$(DATAF1): $(srcdir)/vtc/data/gen.sh
+	$(srcdir)/vtc/data/gen.sh
 
 # 1st file written by generator
 SIGF1 = \
@@ -2169,8 +2169,8 @@ BUILT_TESTS =				\
 
 $(BUILT_TESTS) $(SIGF): $(SIGF1)
 
-$(SIGF1): $(DATAF) vtc/sigs/gen.sh
-	vtc/sigs/gen.sh
+$(SIGF1): $(DATAF) $(srcdir)/vtc/sigs/gen.sh
+	$(srcdir)/vtc/sigs/gen.sh
 
 CLEANFILES = \
 	$(DATAF1)	\
