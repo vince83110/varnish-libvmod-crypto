@@ -36,7 +36,6 @@ Example
 		return (synth(400, "invalid signature"));
 	    }
 	}
-} -start
 
 $Object key(PRIV_TASK)
 
