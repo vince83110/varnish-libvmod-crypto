@@ -190,6 +190,12 @@ key_free(void *ptr)
 	memset(k, 0, sizeof *k);
 }
 
+static const struct vmod_priv_methods init_priv_task_methods[1] = {{
+		.magic = VMOD_PRIV_METHODS_MAGIC,
+		.type = "vmod_crypto_init_priv_task",
+		.fini = key_free
+}};
+
 VCL_VOID
 vmod_key__init(VRT_CTX,
     struct VPFX(crypto_key) **kp, const char *vcl_name,
@@ -209,7 +215,7 @@ vmod_key__init(VRT_CTX,
 
 	/* use PRIV_TASK to free key after vcl_init */
 	priv->priv = k;
-	priv->free = key_free;
+	priv->methods = init_priv_task_methods;
 
 	*kp = k;
 }
@@ -502,6 +508,12 @@ free_crypto_verifier_task(void *ptr)
 	vcvt->evpctx = NULL;
 }
 
+static const struct vmod_priv_methods verifier_priv_task_methods[1] = {{
+		.magic = VMOD_PRIV_METHODS_MAGIC,
+		.type = "vmod_crypto_verifier_priv_task",
+		.fini = free_crypto_verifier_task
+}};
+
 static EVP_MD_CTX *
 crypto_verifier_task_md_ctx(VRT_CTX,
     const struct vmod_crypto_verifier *vcv, int reset)
@@ -543,7 +555,7 @@ crypto_verifier_task_md_ctx(VRT_CTX,
 		}
 
 		task->priv = vcvt;
-		task->free = free_crypto_verifier_task;
+		task->methods = verifier_priv_task_methods;
 	}
 
 	if (EVP_MD_CTX_copy_ex(vcvt->evpctx, vcv->evpctx) != 1) {
