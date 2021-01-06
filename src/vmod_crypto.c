@@ -66,7 +66,7 @@ static pthread_mutex_t *crypto_locks = NULL;
 static size_t crypto_locks_n = 0;
 
 static void
-crypto_lock(int mode, int n, const char *file, int line)
+crypto_lock(int mode, size_t n, const char *file, int line)
 {
 	(void) file;
 	(void) line;
