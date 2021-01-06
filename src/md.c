@@ -30,7 +30,6 @@
 
 #include <openssl/evp.h>
 #include <cache/cache.h>
-#include <vas.h>
 #include "md.h"
 
 #include "vcc_crypto_if.h"
