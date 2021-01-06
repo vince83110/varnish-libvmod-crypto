@@ -1,0 +1,17 @@
+-efile(537, tbl*)
+-efile(451, tbl*)
+
+-ecall(835, dlopen)
+-e801	// goto
+-ecall(840, VSB_bcat)
+-e793	// significant characters in an external identifier
+
+// we can not change external interfaces / code
+-efile(766, *_if.c)
+-esym(818, args)
+-esym(818, vcv)
+-esym(818, u)
+-esym(818, k)
+
+// must always be included to ensure sanity
+-efile(766, config.h)
