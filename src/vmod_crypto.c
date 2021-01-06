@@ -75,9 +75,9 @@ crypto_lock(int mode, size_t n, const char *file, int line)
 	assert(n < crypto_locks_n);
 
 	if (mode & CRYPTO_LOCK)
-		pthread_mutex_lock(&crypto_locks[n]);
+		AZ(pthread_mutex_lock(&crypto_locks[n]));
 	else
-		pthread_mutex_unlock(&crypto_locks[n]);
+		AZ(pthread_mutex_unlock(&crypto_locks[n]));
 }
 
 static __attribute__((constructor)) void
@@ -93,7 +93,7 @@ init(void)
 	crypto_locks_n = n;
 
 	for (i = 0; i < n; i++)
-		pthread_mutex_init(&crypto_locks[i], NULL);
+		AZ(pthread_mutex_init(&crypto_locks[i], NULL));
 
 	CRYPTO_set_id_callback(crypto_thread_id);
 	CRYPTO_set_locking_callback(crypto_lock);
@@ -115,7 +115,7 @@ fini(void)
 	CRYPTO_set_locking_callback(NULL);
 
 	for (i = 0; i < crypto_locks_n; i++)
-		pthread_mutex_destroy(&crypto_locks[i]);
+		AZ(pthread_mutex_destroy(&crypto_locks[i]));
 
 	free(TRUST_ME(crypto_locks));
 	crypto_locks = NULL;
