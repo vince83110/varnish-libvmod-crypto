@@ -633,6 +633,7 @@ crypto_err_cb(const char *s, size_t l, void *u)
 	VRT_CTX;
 	CAST_OBJ_NOTNULL(ctx, u, VRT_CTX_MAGIC);
 	VSLb(ctx->vsl, SLT_Debug, "crypto %.*s", l, s);
+	return (0);
 }
 
 
