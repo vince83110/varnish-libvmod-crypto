@@ -248,7 +248,7 @@ vmod_key_use(VRT_CTX, struct VPFX(crypto_key) *k)
 	return (VRT_blob(ctx, "xkey.use()", k, sizeof *k, CRYPTO_KEY_BLOB));
 }
 
-EVP_PKEY *
+static EVP_PKEY *
 pkey_blob(VRT_CTX, VCL_BLOB blob)
 {
 	struct VPFX(crypto_key) *k;
