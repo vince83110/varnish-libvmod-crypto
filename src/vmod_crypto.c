@@ -178,10 +178,11 @@ struct VPFX(crypto_key) {
 #define CRYPTO_KEY_BLOB		0x32c81a51
 
 static void
-key_free(void *ptr)
+key_free(VRT_CTX, void *ptr)
 {
 	struct VPFX(crypto_key) *k;
 
+	(void) ctx;
 	CAST_OBJ_NOTNULL(k, ptr, VMOD_CRYPTO_KEY_MAGIC);
 
 	if (k->pkey != NULL)
@@ -498,10 +499,11 @@ vmod_verifier__fini(struct vmod_crypto_verifier **vcvp)
 }
 
 static void
-free_crypto_verifier_task(void *ptr)
+free_crypto_verifier_task(VRT_CTX, void *ptr)
 {
 	struct vmod_crypto_verifier_task *vcvt;
 
+	(void) ctx;
 	CAST_OBJ_NOTNULL(vcvt, ptr, VMOD_CRYPTO_VERIFIER_TASK_MAGIC);
 	if (vcvt->evpctx)
 		EVP_MD_CTX_free(vcvt->evpctx);

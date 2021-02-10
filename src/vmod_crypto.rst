@@ -1,7 +1,7 @@
 ..
 .. NB:  This file is machine generated, DO NOT EDIT!
 ..
-.. Edit vmod.vcc and run make instead
+.. Edit ./vmod_crypto.vcc and run make instead
 ..
 
 
@@ -65,7 +65,6 @@ Example
 		return (synth(400, "invalid signature"));
 	    }
 	}
-} -start
 
 .. _crypto.key():
 
