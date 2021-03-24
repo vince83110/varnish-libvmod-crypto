@@ -292,19 +292,29 @@ pubkey_pem(VRT_CTX, VCL_STRING pem)
 	return (NULL);
 }
 
-VCL_VOID
-vmod_key_pem_pubkey(VRT_CTX, struct VPFX(crypto_key) *k,
-    VCL_STRING pem)
+static struct VPFX(crypto_key) *
+crypto_key_ok(VRT_CTX, VCL_STRING name, struct VPFX(crypto_key) *k)
 {
 	if (! key_ctx_ok(ctx))
-		return;
+		return (NULL);
 
 	CHECK_OBJ_NOTNULL(k, VMOD_CRYPTO_KEY_MAGIC);
 
 	if (k->pkey != NULL) {
-		VRT_fail(ctx, "xkey.pem_pubkey(): key already defined");
-		return;
+		VRT_fail(ctx, "xkey.%s(): key already defined", name);
+		return (NULL);
 	}
+	return (k);
+}
+
+VCL_VOID
+vmod_key_pem_pubkey(VRT_CTX, struct VPFX(crypto_key) *k,
+    VCL_STRING pem)
+{
+
+	k = crypto_key_ok(ctx, "pem_pubkey", k);
+	if (k == NULL)
+		return;
 
 	k->pkey = pubkey_pem(ctx, pem);
 }
