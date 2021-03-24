@@ -460,9 +460,9 @@ struct vmod_crypto_verifier {
 	EVP_MD_CTX	*evpctx;
 };
 
-struct vmod_crypto_verifier_task {
+struct vmod_crypto_ctx_task {
 	unsigned	magic;
-#define VMOD_CRYPTO_VERIFIER_TASK_MAGIC	0x32c81a58
+#define VMOD_CRYPTO_CTX_TASK_MAGIC	0x32c81a58
 	EVP_MD_CTX	*evpctx;
 };
 
@@ -565,12 +565,12 @@ vmod_verifier__fini(struct vmod_crypto_verifier **vcvp)
 }
 
 static void
-free_crypto_verifier_task(VRT_CTX, void *ptr)
+free_crypto_ctx_task(VRT_CTX, void *ptr)
 {
-	struct vmod_crypto_verifier_task *vcvt;
+	struct vmod_crypto_ctx_task *vcvt;
 
 	(void) ctx;
-	CAST_OBJ_NOTNULL(vcvt, ptr, VMOD_CRYPTO_VERIFIER_TASK_MAGIC);
+	CAST_OBJ_NOTNULL(vcvt, ptr, VMOD_CRYPTO_CTX_TASK_MAGIC);
 	if (vcvt->evpctx)
 		EVP_MD_CTX_free(vcvt->evpctx);
 	vcvt->evpctx = NULL;
@@ -579,14 +579,14 @@ free_crypto_verifier_task(VRT_CTX, void *ptr)
 static const struct vmod_priv_methods verifier_priv_task_methods[1] = {{
 		.magic = VMOD_PRIV_METHODS_MAGIC,
 		.type = "vmod_crypto_verifier_priv_task",
-		.fini = free_crypto_verifier_task
+		.fini = free_crypto_ctx_task
 }};
 
 static EVP_MD_CTX *
-crypto_verifier_task_md_ctx(VRT_CTX,
+crypto_ctx_task_md_ctx(VRT_CTX,
     const struct vmod_crypto_verifier *vcv, int reset)
 {
-	struct vmod_crypto_verifier_task *vcvt;
+	struct vmod_crypto_ctx_task *vcvt;
 	struct vmod_priv *task;
 
 	CHECK_OBJ_NOTNULL(ctx, VRT_CTX_MAGIC);
@@ -601,7 +601,7 @@ crypto_verifier_task_md_ctx(VRT_CTX,
 
 	if (task->priv) {
 		CAST_OBJ_NOTNULL(vcvt, task->priv,
-		    VMOD_CRYPTO_VERIFIER_TASK_MAGIC);
+		    VMOD_CRYPTO_CTX_TASK_MAGIC);
 		AN(vcvt->evpctx);
 		if (! reset)
 			return (vcvt->evpctx);
@@ -609,15 +609,15 @@ crypto_verifier_task_md_ctx(VRT_CTX,
 		vcvt = WS_Alloc(ctx->ws, sizeof *vcvt);
 		if (vcvt == NULL) {
 			VRT_fail(ctx,
-			    "vmod_crypto_verifier_task WS_Alloc failed");
+			    "vmod_crypto_ctx_task WS_Alloc failed");
 			return (NULL);
 		}
-		INIT_OBJ(vcvt, VMOD_CRYPTO_VERIFIER_TASK_MAGIC);
+		INIT_OBJ(vcvt, VMOD_CRYPTO_CTX_TASK_MAGIC);
 
 		vcvt->evpctx = EVP_MD_CTX_new();
 		if (vcvt->evpctx == NULL) {
 			VRT_fail(ctx,
-			    "vmod_crypto_verifier_task EVP_MD_CTX_new()"
+			    "vmod_crypto_ctx_task EVP_MD_CTX_new()"
 			    " failed, error 0x%lx", ERR_get_error());
 			return (NULL);
 		}
@@ -627,7 +627,7 @@ crypto_verifier_task_md_ctx(VRT_CTX,
 	}
 
 	if (EVP_MD_CTX_copy_ex(vcvt->evpctx, vcv->evpctx) != 1) {
-		VRT_fail(ctx, "vmod_crypto_verifier_task copy"
+		VRT_fail(ctx, "vmod_crypto_ctx_task copy"
 		    " failed, error 0x%lx", ERR_get_error());
 		EVP_MD_CTX_free(vcvt->evpctx);
 		vcvt->evpctx = NULL;
@@ -641,7 +641,7 @@ VCL_BOOL
 vmod_verifier_update(VRT_CTX, struct vmod_crypto_verifier *vcv,
     VCL_STRANDS str)
 {
-	EVP_MD_CTX *evpctx = crypto_verifier_task_md_ctx(ctx, vcv, 0);
+	EVP_MD_CTX *evpctx = crypto_ctx_task_md_ctx(ctx, vcv, 0);
 	const char *s;
 	int i;
 
@@ -671,7 +671,7 @@ VCL_BOOL
 vmod_verifier_update_blob(VRT_CTX, struct vmod_crypto_verifier *vcv,
     VCL_BLOB blob)
 {
-	EVP_MD_CTX *evpctx = crypto_verifier_task_md_ctx(ctx, vcv, 0);
+	EVP_MD_CTX *evpctx = crypto_ctx_task_md_ctx(ctx, vcv, 0);
 
 	if (evpctx == NULL)
 		return (0);
@@ -692,7 +692,7 @@ vmod_verifier_update_blob(VRT_CTX, struct vmod_crypto_verifier *vcv,
 VCL_BOOL vmod_verifier_reset(VRT_CTX,
     struct vmod_crypto_verifier *vcv)
 {
-	return (!! crypto_verifier_task_md_ctx(ctx, vcv, 1));
+	return (!! crypto_ctx_task_md_ctx(ctx, vcv, 1));
 }
 
 static int
@@ -708,7 +708,7 @@ crypto_err_cb(const char *s, size_t l, void *u)
 VCL_BOOL vmod_verifier_valid(VRT_CTX,
     struct vmod_crypto_verifier *vcv, VCL_BLOB sig)
 {
-	EVP_MD_CTX *evpctx = crypto_verifier_task_md_ctx(ctx, vcv, 0);
+	EVP_MD_CTX *evpctx = crypto_ctx_task_md_ctx(ctx, vcv, 0);
 	VCL_BOOL r;
 
 	if (evpctx == NULL)
