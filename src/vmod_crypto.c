@@ -447,6 +447,87 @@ vmod_key_rsa(VRT_CTX, struct VPFX(crypto_key) *k, struct VARGS(key_rsa) *args) {
 	if (d != NULL) BN_free(d);
 }
 
+/*
+ * ------------------------------------------------------------
+ * EVP_MD_CTX per PRIV_TASK
+ */
+
+struct vmod_crypto_ctx_task {
+	unsigned	magic;
+#define VMOD_CRYPTO_CTX_TASK_MAGIC	0x32c81a58
+	EVP_MD_CTX	*evpctx;
+};
+
+static void
+free_crypto_ctx_task(VRT_CTX, void *ptr)
+{
+	struct vmod_crypto_ctx_task *vcvt;
+
+	(void) ctx;
+	CAST_OBJ_NOTNULL(vcvt, ptr, VMOD_CRYPTO_CTX_TASK_MAGIC);
+	if (vcvt->evpctx)
+		EVP_MD_CTX_free(vcvt->evpctx);
+	vcvt->evpctx = NULL;
+}
+
+static const struct vmod_priv_methods verifier_priv_task_methods[1] = {{
+		.magic = VMOD_PRIV_METHODS_MAGIC,
+		.type = "vmod_crypto_verifier_priv_task",
+		.fini = free_crypto_ctx_task
+}};
+
+static EVP_MD_CTX *
+crypto_ctx_task_md_ctx(VRT_CTX, const void *id, EVP_MD_CTX *evpctx, int reset)
+{
+	struct vmod_crypto_ctx_task *vcvt;
+	struct vmod_priv *task;
+
+	CHECK_OBJ_NOTNULL(ctx, VRT_CTX_MAGIC);
+
+	task = VRT_priv_task(ctx, id);
+
+	if (task == NULL) {
+		VRT_fail(ctx, "no priv_task");
+		return (NULL);
+	}
+
+	if (task->priv) {
+		CAST_OBJ_NOTNULL(vcvt, task->priv,
+		    VMOD_CRYPTO_CTX_TASK_MAGIC);
+		AN(vcvt->evpctx);
+		if (! reset)
+			return (vcvt->evpctx);
+	} else {
+		vcvt = WS_Alloc(ctx->ws, sizeof *vcvt);
+		if (vcvt == NULL) {
+			VRT_fail(ctx,
+			    "vmod_crypto_ctx_task WS_Alloc failed");
+			return (NULL);
+		}
+		INIT_OBJ(vcvt, VMOD_CRYPTO_CTX_TASK_MAGIC);
+
+		vcvt->evpctx = EVP_MD_CTX_new();
+		if (vcvt->evpctx == NULL) {
+			VRT_fail(ctx,
+			    "vmod_crypto_ctx_task EVP_MD_CTX_new()"
+			    " failed, error 0x%lx", ERR_get_error());
+			return (NULL);
+		}
+
+		task->priv = vcvt;
+		task->methods = verifier_priv_task_methods;
+	}
+
+	if (EVP_MD_CTX_copy_ex(vcvt->evpctx, evpctx) != 1) {
+		VRT_fail(ctx, "vmod_crypto_ctx_task copy"
+		    " failed, error 0x%lx", ERR_get_error());
+		EVP_MD_CTX_free(vcvt->evpctx);
+		vcvt->evpctx = NULL;
+		return (NULL);
+	}
+
+	return (vcvt->evpctx);
+}
 
 /*
  * ------------------------------------------------------------
@@ -457,12 +538,6 @@ struct vmod_crypto_verifier {
 	unsigned	magic;
 #define VMOD_CRYPTO_VERIFIER_MAGIC		0x32c81a57
 	char		*vcl_name;
-	EVP_MD_CTX	*evpctx;
-};
-
-struct vmod_crypto_ctx_task {
-	unsigned	magic;
-#define VMOD_CRYPTO_CTX_TASK_MAGIC	0x32c81a58
 	EVP_MD_CTX	*evpctx;
 };
 
@@ -562,77 +637,6 @@ vmod_verifier__fini(struct vmod_crypto_verifier **vcvp)
 	vcv->evpctx = NULL;
 	free(vcv->vcl_name);
 	FREE_OBJ(vcv);
-}
-
-static void
-free_crypto_ctx_task(VRT_CTX, void *ptr)
-{
-	struct vmod_crypto_ctx_task *vcvt;
-
-	(void) ctx;
-	CAST_OBJ_NOTNULL(vcvt, ptr, VMOD_CRYPTO_CTX_TASK_MAGIC);
-	if (vcvt->evpctx)
-		EVP_MD_CTX_free(vcvt->evpctx);
-	vcvt->evpctx = NULL;
-}
-
-static const struct vmod_priv_methods verifier_priv_task_methods[1] = {{
-		.magic = VMOD_PRIV_METHODS_MAGIC,
-		.type = "vmod_crypto_verifier_priv_task",
-		.fini = free_crypto_ctx_task
-}};
-
-static EVP_MD_CTX *
-crypto_ctx_task_md_ctx(VRT_CTX, const void *id, EVP_MD_CTX *evpctx, int reset)
-{
-	struct vmod_crypto_ctx_task *vcvt;
-	struct vmod_priv *task;
-
-	CHECK_OBJ_NOTNULL(ctx, VRT_CTX_MAGIC);
-
-	task = VRT_priv_task(ctx, id);
-
-	if (task == NULL) {
-		VRT_fail(ctx, "no priv_task");
-		return (NULL);
-	}
-
-	if (task->priv) {
-		CAST_OBJ_NOTNULL(vcvt, task->priv,
-		    VMOD_CRYPTO_CTX_TASK_MAGIC);
-		AN(vcvt->evpctx);
-		if (! reset)
-			return (vcvt->evpctx);
-	} else {
-		vcvt = WS_Alloc(ctx->ws, sizeof *vcvt);
-		if (vcvt == NULL) {
-			VRT_fail(ctx,
-			    "vmod_crypto_ctx_task WS_Alloc failed");
-			return (NULL);
-		}
-		INIT_OBJ(vcvt, VMOD_CRYPTO_CTX_TASK_MAGIC);
-
-		vcvt->evpctx = EVP_MD_CTX_new();
-		if (vcvt->evpctx == NULL) {
-			VRT_fail(ctx,
-			    "vmod_crypto_ctx_task EVP_MD_CTX_new()"
-			    " failed, error 0x%lx", ERR_get_error());
-			return (NULL);
-		}
-
-		task->priv = vcvt;
-		task->methods = verifier_priv_task_methods;
-	}
-
-	if (EVP_MD_CTX_copy_ex(vcvt->evpctx, evpctx) != 1) {
-		VRT_fail(ctx, "vmod_crypto_ctx_task copy"
-		    " failed, error 0x%lx", ERR_get_error());
-		EVP_MD_CTX_free(vcvt->evpctx);
-		vcvt->evpctx = NULL;
-		return (NULL);
-	}
-
-	return (vcvt->evpctx);
 }
 
 VCL_BOOL
