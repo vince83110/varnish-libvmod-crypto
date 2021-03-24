@@ -58,6 +58,17 @@ comprise RSA and DSA.
 
 Any error is fatal to vcl initialization.
 
+$Method VOID .pem_privkey(STRING, STRING password=0)
+
+Create a key from the PEM-encoded private key, optionally decrypting
+it using `password`.
+
+The cryptographic method to be used and the key length are
+automatically determined from _pem_. Typically supported methods
+comprise RSA and DSA.
+
+Any error is fatal to vcl initialization.
+
 $Method VOID .rsa(BLOB n, BLOB e, [BLOB d])
 
 Create an RSA key from the parameters n, e, and optionally d.

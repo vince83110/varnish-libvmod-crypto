@@ -26,6 +26,8 @@ SYNOPSIS
   
       :ref:`xkey.pem_pubkey()`
   
+      :ref:`xkey.pem_privkey()`
+  
       :ref:`xkey.rsa()`
   
   :ref:`crypto.verifier()`
@@ -89,6 +91,20 @@ VOID xkey.pem_pubkey(STRING)
 ----------------------------
 
 Create a key from the PEM-encoded public key.
+
+The cryptographic method to be used and the key length are
+automatically determined from _pem_. Typically supported methods
+comprise RSA and DSA.
+
+Any error is fatal to vcl initialization.
+
+.. _xkey.pem_privkey():
+
+VOID xkey.pem_privkey(STRING, STRING password=0)
+------------------------------------------------
+
+Create a key from the PEM-encoded private key, optionally decrypting
+it using `password`.
 
 The cryptographic method to be used and the key length are
 automatically determined from _pem_. Typically supported methods

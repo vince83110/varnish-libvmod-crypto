@@ -292,6 +292,50 @@ pubkey_pem(VRT_CTX, VCL_STRING pem)
 	return (NULL);
 }
 
+static int
+literal_pw_cb(char *buf, int size, int rwflag, void *u)
+{
+	size_t len;
+
+	(void) rwflag;
+	if (u == NULL)
+		return (0);
+
+	len = strlen(u);
+	if (len > size)
+		len = size;
+	memcpy(buf, u, len);
+	return (len);
+}
+
+/* to be freed by caller */
+static EVP_PKEY *
+privkey_pem(VRT_CTX, VCL_STRING pem, VCL_STRING password)
+{
+	EVP_PKEY *pkey;
+	BIO *bio;
+
+	ERR_clear_error();
+
+	bio = BIO_new_mem_buf(pem, -1);
+	if (bio == NULL) {
+		VRT_fail(ctx, "key bio failed");
+		return (NULL);
+	}
+
+	pkey = PEM_read_bio_PrivateKey(bio, NULL,
+	    literal_pw_cb, TRUST_ME(password));
+	BIO_free_all(bio);
+
+	if (pkey != NULL)
+		return (pkey);
+
+	VRT_fail(ctx, "read public key failed, error 0x%lx",
+	    ERR_get_error());
+
+	return (NULL);
+}
+
 static struct VPFX(crypto_key) *
 crypto_key_ok(VRT_CTX, VCL_STRING name, struct VPFX(crypto_key) *k)
 {
@@ -317,6 +361,18 @@ vmod_key_pem_pubkey(VRT_CTX, struct VPFX(crypto_key) *k,
 		return;
 
 	k->pkey = pubkey_pem(ctx, pem);
+}
+
+VCL_VOID
+vmod_key_pem_privkey(VRT_CTX, struct VPFX(crypto_key) *k,
+    VCL_STRING pem, VCL_STRING password)
+{
+
+	k = crypto_key_ok(ctx, "pem_privkey", k);
+	if (k == NULL)
+		return;
+
+	k->pkey = privkey_pem(ctx, pem, password);
 }
 
 VCL_VOID
