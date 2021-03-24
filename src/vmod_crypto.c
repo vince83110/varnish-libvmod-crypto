@@ -267,7 +267,7 @@ pkey_blob(VRT_CTX, VCL_BLOB blob)
 
 /* to be freed by caller */
 static EVP_PKEY *
-pkey_pem(VRT_CTX, VCL_STRING pem)
+pubkey_pem(VRT_CTX, VCL_STRING pem)
 {
 	EVP_PKEY *pkey;
 	BIO *bio;
@@ -306,7 +306,7 @@ vmod_key_pem_pubkey(VRT_CTX, struct VPFX(crypto_key) *k,
 		return;
 	}
 
-	k->pkey = pkey_pem(ctx, pem);
+	k->pkey = pubkey_pem(ctx, pem);
 }
 
 VCL_VOID
@@ -450,7 +450,7 @@ vmod_verifier__init(VRT_CTX,
 	}
 
 	if (args->valid_pem)
-		pkey = pkey_pem(ctx, args->pem);
+		pkey = pubkey_pem(ctx, args->pem);
 	else if (args->valid_key)
 		pkey = pkey_blob(ctx, args->key);
 	else
