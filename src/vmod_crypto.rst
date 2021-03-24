@@ -40,6 +40,16 @@ SYNOPSIS
   
       :ref:`xverifier.valid()`
   
+  :ref:`crypto.signer()`
+  
+      :ref:`xsigner.update()`
+  
+      :ref:`xsigner.update_blob()`
+  
+      :ref:`xsigner.reset()`
+  
+      :ref:`xsigner.final()`
+  
 
 DESCRIPTION
 ===========
@@ -180,6 +190,65 @@ Note that after calling .valid(), .update can be called again to add
 additional data, which can then be validated against a (different)
 signature using another call to .valid().
 
+.. _crypto.signer():
+
+new xsigner = crypto.signer(ENUM digest, [STRING pem], [BLOB key])
+------------------------------------------------------------------
+
+::
+
+   new xsigner = crypto.signer(
+      ENUM {md_null, md4, md5, sha1, sha224, sha256, sha384, sha512, ripemd160, rmd160, whirlpool} digest,
+      [STRING pem],
+      [BLOB key]
+   )
+
+Create an object to create signatures using _digest_ and _key_.
+
+The _key_ argument should be a call to `xkey.use()`_ on the respective
+`crypto.key()`_ private key object.
+
+Alternatively to _key_, the _pem_ argument may be used to pass a
+PEM-encoded private key specification. Password protection is not
+supported with a _pem_ argument. Use of the _pem_ argument is
+deprecated.
+
+Either the _key_ or the _pem_ argument must be given.
+
+.. _xsigner.update():
+
+BOOL xsigner.update(STRING)
+---------------------------
+
+Add strings to the data to be signed.
+
+.. _xsigner.update_blob():
+
+BOOL xsigner.update_blob(BLOB)
+------------------------------
+
+Add a blob to the data to be signed.
+
+.. _xsigner.reset():
+
+BOOL xsigner.reset()
+--------------------
+
+Reset the signer state as if previous calls to the update methods had
+not happened.
+
+.. _xsigner.final():
+
+BLOB xsigner.final()
+--------------------
+
+Return the signature for data added using `xsigner.update()` and
+`xsigner.update_blob()`.
+
+Note that after calling `xsigner.final()`,
+`xsigner.update()`/`xsigner.update_blob()` can be called again to add
+additional data, and more signatures can be generated with
+`xsigner.final()`.
 
 SEE ALSO
 ========vcl\(7),varnishd\(1)

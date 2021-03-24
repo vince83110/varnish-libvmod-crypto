@@ -531,6 +531,20 @@ crypto_ctx_task_md_ctx(VRT_CTX, const void *id, EVP_MD_CTX *evpctx, int reset)
 
 /*
  * ------------------------------------------------------------
+ * misc
+ */
+
+static int
+crypto_err_cb(const char *s, size_t l, void *u)
+{
+	VRT_CTX;
+	CAST_OBJ_NOTNULL(ctx, u, VRT_CTX_MAGIC);
+	VSLb(ctx->vsl, SLT_Debug, "crypto %.*s", l, s);
+	return (0);
+}
+
+/*
+ * ------------------------------------------------------------
  * $Object verfier()
  */
 
@@ -697,16 +711,6 @@ VCL_BOOL vmod_verifier_reset(VRT_CTX,
 	return (!! crypto_ctx_task_md_ctx(ctx, vcv, vcv->evpctx, 1));
 }
 
-static int
-crypto_err_cb(const char *s, size_t l, void *u)
-{
-	VRT_CTX;
-	CAST_OBJ_NOTNULL(ctx, u, VRT_CTX_MAGIC);
-	VSLb(ctx->vsl, SLT_Debug, "crypto %.*s", l, s);
-	return (0);
-}
-
-
 VCL_BOOL vmod_verifier_valid(VRT_CTX,
     struct vmod_crypto_verifier *vcv, VCL_BLOB sig)
 {
@@ -727,4 +731,206 @@ VCL_BOOL vmod_verifier_valid(VRT_CTX,
 		ERR_print_errors_cb(crypto_err_cb, (void *)ctx);
 	}
 	return (r);
+}
+
+/*
+ * ------------------------------------------------------------
+ * $Object signer()
+ *
+ * XXX structurally this is very similar to the verifier. Using common functions
+ * has been considered, but the benefits seemed quite marginal
+ */
+
+struct vmod_crypto_signer {
+	unsigned			magic;
+#define VMOD_CRYPTO_SIGNER_MAGIC	0x6bba960e
+	char				*vcl_name;
+	EVP_MD_CTX			*evpctx;
+};
+
+VCL_VOID
+vmod_signer__init(VRT_CTX,
+    struct vmod_crypto_signer **vcsp, const char *vcl_name,
+    struct VARGS(signer__init) *args)
+{
+	struct vmod_crypto_signer *vcs;
+	const EVP_MD *md = md_evp(md_parse(args->digest));
+	EVP_PKEY *pkey;
+
+	if (md == NULL) {
+		VRT_fail(ctx, "digest %s not supported", args->digest);
+		return;
+	}
+
+	if (args->valid_pem ^ args->valid_key == 0) {
+		VRT_fail(ctx, "Need either pem or key, but not both");
+		return;
+	}
+
+	AN(vcsp);
+	AZ(*vcsp);
+
+	ALLOC_OBJ(vcs, VMOD_CRYPTO_SIGNER_MAGIC);
+	if (vcs == NULL) {
+		VRT_fail(ctx, "obj alloc failed");
+		return;
+	}
+
+	REPLACE(vcs->vcl_name, vcl_name);
+	if (vcs->vcl_name == NULL) {
+		VRT_fail(ctx, "dup vcl_name failed");
+		goto err_dup;
+	}
+
+	ERR_clear_error();
+
+	vcs->evpctx = EVP_MD_CTX_new();
+	if (vcs->evpctx == NULL) {
+		VRT_fail(ctx, "EVP_MD_CTX_new failed, error 0x%lx",
+		    ERR_get_error());
+		goto err_evpctx;
+	}
+
+	if (EVP_DigestInit_ex(vcs->evpctx, md, NULL) != 1) {
+		VRT_fail(ctx, "EVP_DigestInit_ex failed, error 0x%lx",
+		    ERR_get_error());
+		goto err_digest;
+	}
+
+	if (args->valid_pem)
+		pkey = privkey_pem(ctx, args->pem, NULL);
+	else if (args->valid_key)
+		pkey = pkey_blob(ctx, args->key);
+	else
+		INCOMPL();
+
+	if (pkey == NULL)
+		goto err_digest;
+
+	if (EVP_DigestSignInit(vcs->evpctx, NULL, md, NULL, pkey) !=1) {
+		VRT_fail(ctx, "EVP_DigestSignInit failed, error 0x%lx",
+		    ERR_get_error());
+		EVP_PKEY_free(pkey);
+		goto err_digest;
+	}
+
+	if (args->valid_pem)
+		EVP_PKEY_free(pkey);
+
+	*vcsp = vcs;
+	return;
+
+  err_digest:
+	EVP_MD_CTX_free(vcs->evpctx);
+	vcs->evpctx = NULL;
+  err_evpctx:
+	free(vcs->vcl_name);
+  err_dup:
+	FREE_OBJ(vcs);
+}
+
+VCL_VOID
+vmod_signer__fini(struct vmod_crypto_signer **vcsp)
+{
+	struct vmod_crypto_signer *vcs = *vcsp;
+
+	*vcsp = NULL;
+	if (vcs == NULL)
+		return;
+
+	CHECK_OBJ(vcs, VMOD_CRYPTO_SIGNER_MAGIC);
+
+	EVP_MD_CTX_free(vcs->evpctx);
+	vcs->evpctx = NULL;
+	free(vcs->vcl_name);
+	FREE_OBJ(vcs);
+}
+
+VCL_BOOL
+vmod_signer_update(VRT_CTX, struct vmod_crypto_signer *vcs,
+    VCL_STRANDS str)
+{
+	EVP_MD_CTX *evpctx = crypto_ctx_task_md_ctx(ctx, vcs, vcs->evpctx, 0);
+	const char *s;
+	int i;
+
+	if (evpctx == NULL)
+		return (0);
+
+	AN(str);
+
+	ERR_clear_error();
+
+	for (i = 0; i < str->n; i++) {
+		s = str->p[i];
+
+		if (s == NULL || *s == '\0')
+			continue;
+
+		if (EVP_DigestSignUpdate(evpctx, s, strlen(s)) != 1) {
+			VRT_fail(ctx, "EVP_DigestSignUpdate"
+			    " failed, error 0x%lx", ERR_get_error());
+			return (0);
+		}
+	}
+
+	return (1);
+}
+VCL_BOOL
+vmod_signer_update_blob(VRT_CTX, struct vmod_crypto_signer *vcs,
+    VCL_BLOB blob)
+{
+	EVP_MD_CTX *evpctx = crypto_ctx_task_md_ctx(ctx, vcs, vcs->evpctx, 0);
+
+	if (evpctx == NULL)
+		return (0);
+
+	ERR_clear_error();
+	if (blob && blob->len > 0) {
+		AN(blob->blob);
+		if (EVP_DigestSignUpdate(evpctx,
+			blob->blob, blob->len) != 1) {
+			VRT_fail(ctx, "EVP_DigestSignUpdate"
+			    " failed, error 0x%lx", ERR_get_error());
+			return (0);
+		}
+	}
+	return (1);
+}
+
+VCL_BOOL vmod_signer_reset(VRT_CTX,
+    struct vmod_crypto_signer *vcs)
+{
+	return (!! crypto_ctx_task_md_ctx(ctx, vcs, vcs->evpctx, 1));
+}
+
+VCL_BLOB vmod_signer_final(VRT_CTX, struct vmod_crypto_signer *vcs)
+{
+	EVP_MD_CTX *evpctx = crypto_ctx_task_md_ctx(ctx, vcs, vcs->evpctx, 0);
+	unsigned char *sig;
+	size_t siglen;
+
+	if (evpctx == NULL)
+		return (0);
+
+	ERR_clear_error();
+	if (EVP_DigestSignFinal(evpctx, NULL, &siglen) != 1)
+		goto err;
+
+	sig = WS_Alloc(ctx->ws, siglen);
+	if (sig == NULL) {
+		VRT_fail(ctx, "%s.final() out of workspace", vcs->vcl_name);
+		return (NULL);
+	}
+
+	ERR_clear_error();
+	if (EVP_DigestSignFinal(evpctx, sig, &siglen) != 1)
+		goto err;
+
+	return (VRT_blob(ctx, "xsigner.final()", sig, siglen, 0x6bba960e));
+  err:
+	VSLb(ctx->vsl, SLT_Debug, "%s.final() failed: %s",
+	    vcs->vcl_name, ERR_get_error());
+	ERR_print_errors_cb(crypto_err_cb, (void *)ctx);
+	return (NULL);
 }
