@@ -9,9 +9,9 @@
 
 .. _vmod_crypto(3):
 
-======================================================
-VMOD crypto - Public Key hash verification for Varnish
-======================================================
+================================================================================
+VMOD crypto - Public Key signature generation and verification for Varnish-Cache
+================================================================================
 
 SYNOPSIS
 ========
@@ -114,7 +114,7 @@ VOID xkey.pem_privkey(STRING, STRING password=0)
 ------------------------------------------------
 
 Create a key from the PEM-encoded private key, optionally decrypting
-it using `password`.
+it using _password_.
 
 The cryptographic method to be used and the key length are
 automatically determined from _pem_. Typically supported methods
@@ -186,9 +186,10 @@ BOOL xverifier.valid(BLOB signature)
 Check if _signature_ is a valid signature for the _verifier_ object
 given the previous updates.
 
-Note that after calling .valid(), .update can be called again to add
-additional data, which can then be validated against a (different)
-signature using another call to .valid().
+Note that after calling `xverifier.valid()`, `xverifier.update()` can
+be called again to add additional data, which can then be validated
+against a (different) signature using another call to
+`xverifier.valid()`.
 
 .. _crypto.signer():
 
@@ -258,7 +259,7 @@ COPYRIGHT
 
 ::
 
-  Copyright 2018 UPLEX Nils Goroll Systemoptimierung
+  Copyright 2018,2021 UPLEX Nils Goroll Systemoptimierung
   All rights reserved
  
   Author: Nils Goroll <nils.goroll@uplex.de>
