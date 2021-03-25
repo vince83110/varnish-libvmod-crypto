@@ -2210,6 +2210,7 @@ TESTS_QUICK = \
 	vtc/RSA_7680_sha512_2003.vtc
 
 TESTS = vtc/jwt.vtc	\
+	vtc/cf.vtc	\
 	$(TESTS_QUICK)
 
 # Comment in for testing all permutations - slow!

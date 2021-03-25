@@ -1,0 +1,43 @@
+varnishtest "test vmod-crypto"
+
+server s1 {
+	rxreq
+	txresp
+} -start
+
+varnish v1 -vcl+backend {
+	import crypto;
+	import blob;
+	import std;
+
+	sub vcl_init {
+	    new s = crypto.signer(sha1,
+		    std.fileread("${vtc_dir}/keys/RSA_1024.pem")); # ");
+	}
+	sub vcl_deliver {
+	    if (! req.http.Policy) {
+		return (synth(400, "Policy missing"));
+	    }
+	    # only using base64 here to have an input with whitespace
+	    set resp.http.Policy = regsuball(
+                blob.transcode(BASE64, IDENTITY, encoded=req.http.Policy),
+                "\s+", "");
+
+	    if (! s.update(resp.http.Policy)) {
+		return (synth(503, "Update failed"));
+	    }
+
+	    set resp.http.CloudFront-Signature =
+		blob.encode(encoding=BASE64CF, blob=s.final());
+	    set resp.http.CloudFront-Policy=
+		blob.transcode(IDENTITY, BASE64CF, encoded=resp.http.Policy);
+	}
+} -start
+
+client c1 {
+	txreq -hdr "Policy: ewogICAgIlN0YXRlbWVudCI6IFsKCXsKCSAgICAiUmVzb3VyY2UiOiAiaHR0cHM6Ly9zb21lLmNkbi5uZXQvKi5qcGciLAoJICAgICJDb25kaXRpb24iOiB7CgkJIkRhdGVMZXNzVGhhbiI6IHsKCQkgICAgIkFXUzpFcG9jaFRpbWUiOiAxNjE2NjAzODc3CgkJfQoJICAgIH0KCX0KICAgIF0KfQo="
+	rxresp
+	expect resp.status == 200
+	expect resp.http.CloudFront-Policy == "eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9zb21lLmNkbi5uZXQvKi5qcGciLCJDb25kaXRpb24iOnsiRGF0ZUxlc3NUaGFuIjp7IkFXUzpFcG9jaFRpbWUiOjE2MTY2MDM4Nzd9fX1dfQ__"
+	expect resp.http.Cloudfront-Signature == "BbP7JNDJ-fEyJyuRcqF85GcB6zxdHSmDttzriMb0~E1XTIN2AeZK~2FbSdb7HWZDhyPm4NOI0EyfpB~M2PwXfNaipau7Lrx8Kva-hQHpGHZNsejsWykx6iyTo6BAWumeG3P-eIoul4AKbU9~vPvO1dvpkuG3fjuhBXi~8HpXNoc_"
+} -run
