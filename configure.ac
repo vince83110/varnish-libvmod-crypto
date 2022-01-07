@@ -4,7 +4,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE([1.12 -Wall -Werror foreign parallel-tests])
+AM_INIT_AUTOMAKE([1.12 -Wall foreign parallel-tests])
 AM_SILENT_RULES([yes])
 AM_PROG_AR
 
