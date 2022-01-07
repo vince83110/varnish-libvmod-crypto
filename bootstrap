@@ -20,6 +20,3 @@ libtoolize --copy --force
 autoheader
 automake --add-missing --copy --foreign
 autoconf
-
-cd "$WORK_DIR"
-"$ROOT_DIR"/configure "$@"
